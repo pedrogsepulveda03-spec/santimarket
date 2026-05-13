@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SANTI MARKET SPA - Delivery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        
+        .header { background: #1a6b1a; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 22px; }
+        .header p { font-size: 14px; opacity: 0.9; }I
+        
+        .estado-banner { text-align: center; padding: 10px; font-weight: bold; }
+        .estado-abierto { background: #1a6b1a; color: white; }
+        .estado-cerrado { background: #cc0000; color: white; }
+        
+        .container { max-width: 900px; margin: 0 auto; padding: 15px; }
+        
+        .categorias { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 15px; }
+        .cat-btn { padding: 8px 16px; background: white; border: 2px solid #1a6b1a; color: #1a6b1a; border-radius: 20px; cursor: pointer; white-space: nowrap; font-weight: bold; }
+        .cat-btn.active { background: #1a6b1a; color: white; }
+        
+        .producto { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .producto-imagen { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; margin-right: 15px; background: #eee; }
+        .producto-info { flex: 1; }
+        .producto-nombre { font-weight: bold; font-size: 16px; }
+        .producto-desc { color: #666; font-size: 13px; }
+        .producto-precio { color: #1a6b1a; font-weight: bold; font-size: 18px; margin-top: 5px; }
+        .producto-stock { font-size: 12px; color: #999; }
+        .producto-agotado { opacity: 0.5; }
+        
+        .btn-agregar { background: #1a6b1a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .btn-agregar:hover { background: #145214; }
+        .btn-agregar:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .carrito-flotante { position: fixed; bottom: 20px; right: 20px; background: #ff6600; color: white; padding: 15px 20px; border-radius: 50px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100; }
+        .carrito-contador { background: white; color: #ff6600; border-radius: 50%; padding: 2px 8px; margin-left: 5px; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 15px; color: #1a6b1a; }
+        
+        .carrito-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .carrito-item button { background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        
+        input, select, textarea { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        
+        .btn-pedir { background: #25D366; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 18px; width: 100%; margin-top: 10px; }
+        .btn-pedir:hover { background: #1ea853; }
+        .btn-pedir:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .btn-admin { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px; }
+        .btn-admin:hover { background: #555; }
+        .btn-guardar { background: #1a6b1a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-eliminar { background: #cc0000; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        
+        .total { font-size: 22px; font-weight: bold; color: #1a6b1a; text-align: right; margin: 15px 0; }
+        
+        .admin-panel { background: #eee; border-radius: 10px; padding: 15px; margin: 15px 0; }
+        .admin-panel h3 { color: #333; }
+        .admin-producto { background: white; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        
+        .pago-opcion { display: flex; gap: 10px; margin: 10px 0; }
+        .pago-opcion label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        
+        @media (max-width: 600px) {
+            .producto { flex-direction: column; text-align: center; }
+            .producto-imagen { margin: 0 auto 10px auto; }
+            .btn-agregar { margin-top: 10px; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏪 SANTI MARKET SPA</h1>
+        <p>Pedidos Online · Talca</p>
+    </div>
+
+    <div id="estado-banner" class="estado-banner estado-abierto">🟢 Estamos operativos · Pedidos disponibles</div>
+
+    <div class="container">
+        <!-- Botones Admin -->
+        <div style="text-align:right; margin-bottom:10px;">
+            <button class="btn-admin" onclick="toggleAdmin()">🔧 Admin</button>
+            <button class="btn-admin" onclick="toggleOperativo()" id="btn-toggle">🔴 Cerrar tienda</button>
+        </div>
+
+        <!-- Panel Admin -->
+        <div id="admin-panel" class="admin-panel" style="display:none;">
+            <h3>🔧 Panel de Administración</h3>
+            <button class="btn-admin" onclick="toggleFormulario()">➕ Agregar producto</button>
+            
+            <div id="form-producto" style="display:none; margin-top:10px;">
+                <h4 id="form-titulo">Nuevo Producto</h4>
+                <input type="hidden" id="edit-id">
+                <input type="text" id="edit-nombre" placeholder="Nombre del producto">
+                <select id="edit-categoria">
+                    <option value="abarrotes">Abarrotes</option>
+                    <option value="bebidas">Bebidas</option>
+                    <option value="lacteos">Lácteos</option>
+                    <option value="panaderia">Panadería</option>
+                    <option value="limpieza">Limpieza</option>
+                    <option value="snacks">Snacks</option>
+                </select>
+                <input type="number" id="edit-precio" placeholder="Precio de venta" step="1">
+                <input type="number" id="edit-stock" placeholder="Stock disponible" step="1">
+                <input type="text" id="edit-desc" placeholder="Descripción breve">
+                <input type="text" id="edit-imagen" placeholder="Link de imagen (opcional)">
+                <div style="margin-top:10px;">
+                    <button class="btn-guardar" onclick="guardarProducto()">💾 Guardar</button>
+                    <button class="btn-admin" onclick="toggleFormulario()">Cancelar</button>
+                </div>
+            </div>
+            
+            <h4 style="margin-top:15px;">📦 Lista de productos:</h4>
+            <div id="admin-lista-productos"></div>
+        </div>
+
+        <h2 style="margin-bottom:10px;">🛒 Nuestros Productos</h2>
+        
+        <div class="categorias">
+            <button class="cat-btn active" onclick="filtrar('todos')">Todos</button>
+            <button class="cat-btn" onclick="filtrar('abarrotes')">Abarrotes</button>
+            <button class="cat-btn" onclick="filtrar('bebidas')">Bebidas</button>
+            <button class="cat-btn" onclick="filtrar('lacteos')">Lácteos</button>
+            <button class="cat-btn" onclick="filtrar('panaderia')">Panadería</button>
+            <button class="cat-btn" onclick="filtrar('limpieza')">Limpieza</button>
+            <button class="cat-btn" onclick="filtrar('snacks')">Snacks</button>
+        </div>
+
+        <div id="lista-productos"></div>
+    </div>
+
+    <div class="carrito-flotante" onclick="abrirCarrito()">
+        🛒 <span id="cantidad-carrito">0</span> · Ver pedido
+    </div>
+
+    <!-- Modal Carrito -->
+    <div id="modal-carrito" class="modal">
+        <div class="modal-content">
+            <h2>🛒 Tu Pedido</h2>
+            <div id="items-carrito"></div>
+            <div class="total" id="total-carrito">Total: $0</div>
+            
+            <h3>📋 Datos para el delivery</h3>
+            <input type="text" id="nombre-cliente" placeholder="Tu nombre completo *" required>
+            <input type="tel" id="telefono-cliente" placeholder="Teléfono de contacto *" required>
+            <input type="text" id="direccion-cliente" placeholder="Dirección de entrega *" required>
+            <textarea id="notas-cliente" placeholder="Notas adicionales (ej: depto, referencia)" rows="2"></textarea>
+            
+            <h4>Sector de entrega:</h4>
+            <select id="sector-delivery">
+                <option value="0">Selecciona tu sector</option>
+                <option value="500">Centro - $500</option>
+                <option value="1000">Norte - $1.000</option>
+                <option value="1500">Sur - $1.500</option>
+                <option value="2000">Oriente - $2.000</option>
+                <option value="2000">Poniente - $2.000</option>
+            </select>
+            
+            <h4>Método de pago:</h4>
+            <div class="pago-opcion">
+                <label><input type="radio" name="pago" value="efectivo" checked> Efectivo</label>
+                <label><input type="radio" name="pago" value="transferencia"> Transferencia</label>
+            </div>
+            
+            <small style="color:#666;">Pedido mínimo: $5.000</small>
+            
+            <button class="btn-pedir" id="btn-confirmar" onclick="hacerPedido()">📱 Enviar pedido por WhatsApp</button>
+            <button style="background:#999; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; width:100%; margin-top:5px;" onclick="cerrarCarrito()">Seguir comprando</button>
+        </div>
+    </div>
+    <script>
+        // ==================== DATOS ====================
+        let operativo = JSON.parse(localStorage.getItem('operativo')) ?? true;
+        let numeroWhatsApp = localStorage.getItem('whatsapp') || '+56967396124'; // ← CAMBIA POR TU NÚMERO
+        
+        let productos = JSON.parse(localStorage.getItem('productosTienda')) || [
+            { id: 1, nombre: "Arroz 1kg", categoria: "abarrotes", precio: 1500, stock: 50, desc: "Arroz grado 1", imagen: "" },
+            { id: 2, nombre: "Aceite 1L", categoria: "abarrotes", precio: 2200, stock: 30, desc: "Aceite vegetal", imagen: "" },
+            { id: 3, nombre: "Fideos 400g", categoria: "abarrotes", precio: 900, stock: 40, desc: "Fideos spaghetti", imagen: "" },
+            { id: 4, nombre: "Coca-Cola 2L", categoria: "bebidas", precio: 2300, stock: 25, desc: "Bebida gaseosa", imagen: "" },
+            { id: 5, nombre: "Agua Mineral 1.5L", categoria: "bebidas", precio: 1200, stock: 35, desc: "Agua con gas", imagen: "" },
+            { id: 6, nombre: "Leche 1L", categoria: "lacteos", precio: 1300, stock: 20, desc: "Leche entera", imagen: "" },
+            { id: 7, nombre: "Queso 250g", categoria: "lacteos", precio: 2800, stock: 15, desc: "Queso mantecoso", imagen: "" },
+            { id: 8, nombre: "Pan batido 1kg", categoria: "panaderia", precio: 2000, stock: 30, desc: "Pan fresco del día", imagen: "" },
+            { id: 9, nombre: "Empanada horno", categoria: "panaderia", precio: 3000, stock: 20, desc: "Empanada de pino artesanal", imagen: "" },
+            { id: 10, nombre: "Detergente 1L", categoria: "limpieza", precio: 1800, stock: 25, desc: "Detergente líquido", imagen: "" },
+            { id: 11, nombre: "Papas fritas", categoria: "snacks", precio: 1200, stock: 40, desc: "Papas fritas 150g", imagen: "" },
+            { id: 12, nombre: "Galletas", categoria: "snacks", precio: 800, stock: 50, desc: "Galletas dulces", imagen: "" },
+            { id: 13, nombre: "Huevos 12u", categoria: "lacteos", precio: 3500, stock: 20, desc: "Huevos blancos grandes", imagen: "" },
+            { id: 14, nombre: "Cerveza 6 pack", categoria: "bebidas", precio: 5000, stock: 30, desc: "Cerveza nacional", imagen: "" },
+            { id: 15, nombre: "Mermelada", categoria: "abarrotes", precio: 1500, stock: 25, desc: "Mermelada de frutilla", imagen: "" }
+        ];
+        
+        let carrito = [];
+        let categoriaActual = 'todos';
+        let adminVisible = false;
+        let proximoId = productos.length > 0 ? Math.max(...productos.map(p => p.id)) + 1 : 1;
+
+        // ==================== GUARDAR ====================
+        function guardarProductos() {
+            localStorage.setItem('productosTienda', JSON.stringify(productos));
+        }
+        function guardarEstado() {
+            localStorage.setItem('operativo', JSON.stringify(operativo));
+        }
+
+        // ==================== ESTADO OPERATIVO ====================
+        function actualizarEstadoUI() {
+            let banner = document.getElementById('estado-banner');
+            let btnToggle = document.getElementById('btn-toggle');
+            let btnConfirmar = document.getElementById('btn-confirmar');
+            
+            if (operativo) {
+                banner.className = 'estado-banner estado-abierto';
+                banner.innerText = '🟢 Estamos operativos · Pedidos disponibles';
+                btnToggle.innerHTML = '🔴 Cerrar tienda';
+                if (btnConfirmar) btnConfirmar.disabled = false;
+            } else {
+                banner.className = 'estado-banner estado-cerrado';
+                banner.innerText = '🔴 No estamos operativos · Volveremos pronto';
+                btnToggle.innerHTML = '🟢 Abrir tienda';
+                if (btnConfirmar) btnConfirmar.disabled = true;
+            }
+        }
+
+        function toggleOperativo() {
+            operativo = !operativo;
+            guardarEstado();
+            actualizarEstadoUI();
+        }
+
+        // ==================== ADMIN ====================
+        function toggleAdmin() {
+            adminVisible = !adminVisible;
+            document.getElementById('admin-panel').style.display = adminVisible ? 'block' : 'none';
+            if (adminVisible) mostrarAdminProductos();
+        }
+
+        function toggleFormulario(idEditar = null) {
+            let form = document.getElementById('form-producto');
+            if (form.style.display === 'none' || idEditar !== null) {
+                form.style.display = 'block';
+                if (idEditar) {
+                    document.getElementById('form-titulo').innerText = 'Editar Producto';
+                    let p = productos.find(pr => pr.id === idEditar);
+                    document.getElementById('edit-id').value = p.id;
+                    document.getElementById('edit-nombre').value = p.nombre;
+                    document.getElementById('edit-categoria').value = p.categoria;
+                    document.getElementById('edit-precio').value = p.precio;
+                    document.getElementById('edit-stock').value = p.stock;
+                    document.getElementById('edit-desc').value = p.desc;
+                    document.getElementById('edit-imagen').value = p.imagen || '';
+                } else {
+                    document.getElementById('form-titulo').innerText = 'Nuevo Producto';
+                    document.getElementById('edit-id').value = '';
+                    document.getElementById('edit-nombre').value = '';
+                    document.getElementById('edit-categoria').value = 'abarrotes';
+                    document.getElementById('edit-precio').value = '';
+                    document.getElementById('edit-stock').value = '';
+                    document.getElementById('edit-desc').value = '';
+                    document.getElementById('edit-imagen').value = '';
+                }
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        function guardarProducto() {
+            let id = document.getElementById('edit-id').value;
+            let nombre = document.getElementById('edit-nombre').value.trim();
+            let categoria = document.getElementById('edit-categoria').value;
+            let precio = parseInt(document.getElementById('edit-precio').value) || 0;
+            let stock = parseInt(document.getElementById('edit-stock').value) || 0;
+            let desc = document.getElementById('edit-desc').value.trim();
+            let imagen = document.getElementById('edit-imagen').value.trim();
+            
+            if (!nombre || precio <= 0) {
+                alert('⚠️ Nombre y precio son obligatorios');
+                return;
+            }
+            
+            if (id) {
+                let p = productos.find(pr => pr.id === parseInt(id));
+                if (p) {
+                    p.nombre = nombre;
+                    p.categoria = categoria;
+                    p.precio = precio;
+                    p.stock = stock;
+                    p.desc = desc;
+                    p.imagen = imagen;
+                }
+            } else {
+                productos.push({
+                    id: proximoId,
+                    nombre: nombre,
+                    categoria: categoria,
+                    precio: precio,
+                    stock: stock,
+                    desc: desc,
+                    imagen: imagen
+                });
+                proximoId++;
+            }
+            
+            guardarProductos();
+            toggleFormulario();
+            mostrarAdminProductos();
+            mostrarProductos();
+        }
+
+        function eliminarProducto(id) {
+            if (confirm('¿Seguro que quieres eliminar este producto?')) {
+                productos = productos.filter(p => p.id !== id);
+                guardarProductos();
+                mostrarAdminProductos();
+                mostrarProductos();
+            }
+        }
+
+        function mostrarAdminProductos() {
+            let div = document.getElementById('admin-lista-productos');
+            div.innerHTML = '';
+            productos.forEach(p => {
+                div.innerHTML += `
+                    <div class="admin-producto">
+                        <span>${p.nombre} - $${p.precio.toLocaleString('es-CL')} (Stock: ${p.stock})</span>
+                        <div>
+                            <button class="btn-guardar" onclick="toggleFormulario(${p.id})">✏️ Editar</button>
+                            <button class="btn-eliminar" onclick="eliminarProducto(${p.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ==================== TIENDA ====================
+        function filtrar(cat) {
+            categoriaActual = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            mostrarProductos();
+        }
+
+        function mostrarProductos() {
+            let div = document.getElementById('lista-productos');
+            div.innerHTML = '';
+            
+            let filtrados = categoriaActual === 'todos' ? productos : productos.filter(p => p.categoria === categoriaActual);
+            
+            if (filtrados.length === 0) {
+                div.innerHTML = '<p style="text-align:center; color:#999; padding:30px;">No hay productos en esta categoría.</p>';
+                return;
+            }
+            
+            filtrados.forEach(p => {
+                let agotado = p.stock <= 0;
+                div.innerHTML += `
+                    <div class="producto ${agotado ? 'producto-agotado' : ''}">
+                        ${p.imagen ? `<img src="${p.imagen}" class="producto-imagen" alt="${p.nombre}" onerror="this.style.display='none'">` : '<div class="producto-imagen" style="display:flex;align-items:center;justify-content:center;color:#ccc;">📷</div>'}
+                        <div class="producto-info">
+                            <div class="producto-nombre">${p.nombre}</div>
+                            <div class="producto-desc">${p.desc}</div>
+                            <div class="producto-precio">$${p.precio.toLocaleString('es-CL')}</div>
+                            <div class="producto-stock">${agotado ? '❌ Agotado' : '✅ Disponible (' + p.stock + ')'}</div>
+                        </div>
+                        <button class="btn-agregar" onclick="agregarAlCarrito(${p.id})" ${agotado || !operativo ? 'disabled' : ''}>
+                            ${agotado ? 'Agotado' : '+ Agregar'}
+                        </button>
+                    </div>`;
+            });
+        }
+        function agregarAlCarrito(id) {
+            if (!operativo) { alert('⚠️ No estamos operativos en este momento.'); return; }
+            
+            let p = productos.find(pr => pr.id === id);
+            if (!p || p.stock <= 0) return;
+            
+            let item = carrito.find(c => c.id === id);
+            if (item) {
+                if (item.cantidad >= p.stock) { alert('Stock insuficiente'); return; }
+                item.cantidad++;
+            } else {
+                carrito.push({ id: p.id, nombre: p.nombre, precio: p.precio, cantidad: 1 });
+            }
+            actualizarContador();
+        }
+
+        function actualizarContador() {
+            let total = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+            document.getElementById('cantidad-carrito').innerText = total;
+        }
+
+        function abrirCarrito() {
+            if (carrito.length === 0) { alert('Tu carrito está vacío'); return; }
+            
+            let div = document.getElementById('items-carrito');
+            let total = 0;
+            div.innerHTML = '';
+            
+            carrito.forEach(item => {
+                let subtotal = item.precio * item.cantidad;
+                total += subtotal;
+                div.innerHTML += `
+                    <div class="carrito-item">
+                        <span>${item.nombre} x${item.cantidad}</span>
+                        <span>$${subtotal.toLocaleString('es-CL')}</span>
+                        <button onclick="quitarItem(${item.id})">X</button>
+                    </div>`;
+            });
+            
+            document.getElementById('total-carrito').innerText = `Total: $${total.toLocaleString('es-CL')}`;
+            document.getElementById('modal-carrito').classList.add('active');
+        }
+
+        function quitarItem(id) {
+            let idx = carrito.findIndex(c => c.id === id);
+            if (idx !== -1) {
+                if (carrito[idx].cantidad > 1) carrito[idx].cantidad--;
+                else carrito.splice(idx, 1);
+            }
+            actualizarContador();
+            abrirCarrito();
+        }
+
+        function cerrarCarrito() {
+            document.getElementById('modal-carrito').classList.remove('active');
+        }
+
+        function hacerPedido() {
+            if (!operativo) {
+                alert('⚠️ No estamos operativos en este momento. Vuelve pronto.');
+                return;
+            }
+            
+            let nombre = document.getElementById('nombre-cliente').value.trim();
+            let telefono = document.getElementById('telefono-cliente').value.trim();
+            let direccion = document.getElementById('direccion-cliente').value.trim();
+            let notas = document.getElementById('notas-cliente').value.trim();
+            let sector = document.getElementById('sector-delivery').value;
+            let costoDelivery = parseInt(sector) || 0;
+            let metodoPago = document.querySelector('input[name="pago"]:checked').value;
+            
+            if (!nombre || !telefono || !direccion || sector === '0') {
+                alert('⚠️ Completa todos los datos del delivery');
+                return;
+            }
+            
+            let totalProductos = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            
+            if (totalProductos < 5000) {
+                alert('⚠️ El pedido mínimo es $5.000');
+                return;
+            }
+            
+            let totalFinal = totalProductos + costoDelivery;
+            
+            // Armar mensaje WhatsApp
+            let mensaje = `*🛒 PEDIDO SANTI MARKET SPA*%0A%0A`;
+            mensaje += `*Cliente:* ${nombre}%0A`;
+            mensaje += `*Teléfono:* ${telefono}%0A`;
+            mensaje += `*Dirección:* ${direccion}%0A`;
+            if (notas) mensaje += `*Notas:* ${notas}%0A`;
+            mensaje += `*Sector:* ${document.getElementById('sector-delivery').selectedOptions[0].text}%0A`;
+            mensaje += `*Pago:* ${metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia'}%0A%0A`;
+            mensaje += `*PRODUCTOS:*%0A`;
+            
+            carrito.forEach(item => {
+                mensaje += `- ${item.nombre} x${item.cantidad}: $${(item.precio * item.cantidad).toLocaleString('es-CL')}%0A`;
+            });
+            
+            mensaje += `%0A*Subtotal:* $${totalProductos.toLocaleString('es-CL')}%0A`;
+            mensaje += `*Delivery:* $${costoDelivery.toLocaleString('es-CL')}%0A`;
+            mensaje += `*TOTAL: $${totalFinal.toLocaleString('es-CL')}*%0A%0A`;
+            
+            if (metodoPago === 'transferencia') {
+                mensaje += `*Datos para transferencia:*%0A`;
+                mensaje += `Banco: Estado%0A`;
+                mensaje += `RUT: 78.420.796-k%0A`;
+                mensaje += `Titular: SANTI MARKET SPA%0A`;
+                mensaje += `Monto: $${totalFinal.toLocaleString('es-CL')}%0A%0A`;
+                mensaje += `(Adjunta comprobante aquí)%0A%0A`;
+            }
+            
+            mensaje += `Gracias por tu pedido 🙌`;
+            
+            // Abrir WhatsApp
+            window.open(`https://wa.me/${numeroWhatsApp}?text=${mensaje}`, '_blank');
+            
+            // Limpiar carrito
+            carrito = [];
+            actualizarContador();
+            cerrarCarrito();
+        }
+
+        // ==================== INICIALIZAR ====================
+        function init() {
+            actualizarEstadoUI();
+            mostrarProductos();
+            mostrarAdminProductos();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
